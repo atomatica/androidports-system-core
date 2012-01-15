@@ -263,6 +263,11 @@ on boot
 # Set this property so surfaceflinger is not started by system_init
     setprop system_init.startsurfaceflinger 0
 
+# Run scripts in /etc/init.d/
+    start sysinit
+
+# Wait until scripts in /etc/init.d/ finish before continuing
+on service-exited-sysinit
     class_start core
     class_start main
 
@@ -480,5 +485,9 @@ service keystore /system/bin/keystore /data/misc/keystore
 service dumpstate /system/bin/dumpstate -s
     class main
     socket dumpstate stream 0660 shell log
+    disabled
+    oneshot
+
+service sysinit /system/bin/logwrapper /system/usr/bin/busybox run-parts /system/etc/init.d
     disabled
     oneshot
