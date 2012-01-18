@@ -44,6 +44,12 @@ ALL_PREBUILT += $(file)
 $(INSTALLED_RAMDISK_TARGET): $(file)
 endif
 
+file := $(TARGET_ROOT_OUT)/init.sh
+$(file) : $(LOCAL_PATH)/init.sh | $(ACP)
+	$(transform-prebuilt-to-target)
+ALL_PREBUILT += $(file)
+$(INSTALLED_RAMDISK_TARGET): $(file)
+
 file := $(TARGET_ROOT_OUT)/ueventd.rc
 $(file) : $(LOCAL_PATH)/ueventd.rc | $(ACP)
 	$(transform-prebuilt-to-target)

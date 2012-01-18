@@ -263,11 +263,11 @@ on boot
 # Set this property so surfaceflinger is not started by system_init
     setprop system_init.startsurfaceflinger 0
 
-# Run scripts in /etc/init.d/
-    start sysinit
+# Run init script
+    start runinit
 
-# Wait until scripts in /etc/init.d/ finish before continuing
-on service-exited-sysinit
+# Wait for init script to finish before continuing
+on property:sys.runinit.complete=1
     class_start core
     class_start main
 
@@ -488,6 +488,6 @@ service dumpstate /system/bin/dumpstate -s
     disabled
     oneshot
 
-service sysinit /system/bin/logwrapper /system/usr/bin/busybox run-parts /system/etc/init.d
+service runinit /init.sh
     disabled
     oneshot
