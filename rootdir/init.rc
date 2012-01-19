@@ -264,10 +264,10 @@ on boot
     setprop system_init.startsurfaceflinger 0
 
 # Run init script
-    start runinit
+    start setup
 
 # Wait for init script to finish before continuing
-on property:sys.runinit.complete=1
+on property:sys.setup.complete=1
     class_start core
     class_start main
 
@@ -488,6 +488,7 @@ service dumpstate /system/bin/dumpstate -s
     disabled
     oneshot
 
-service runinit /init.sh
-    disabled
+service setup /init.sh
+    user root
+    group root
     oneshot
