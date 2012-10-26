@@ -352,7 +352,6 @@ int android_log_processLogBuffer(struct logger_entry *buf,
 {
     entry->tv_sec = buf->sec;
     entry->tv_nsec = buf->nsec;
-    entry->priority = buf->msg[0];
     entry->pid = buf->pid;
     entry->tid = buf->tid;
 
@@ -360,19 +359,49 @@ int android_log_processLogBuffer(struct logger_entry *buf,
      * format: <priority:1><tag:N>\0<message:N>\0
      *
      * tag str
-     *   starts at msg+1
+     *   starts at buf->msg+1
      * msg
-     *   starts at msg+1+len(tag)+1
+     *   starts at buf->msg+1+len(tag)+1
+     *
+     * The message may have been truncated by the kernel log driver.
+     * When that happens, we must null-terminate the message ourselves.
      */
-    entry->tag = buf->msg + 1;
-    const size_t tag_len = strlen(entry->tag);
-    const size_t preambleAndNullLen = tag_len + 3;
-    if (buf->len <= preambleAndNullLen) {
-        fprintf(stderr, "+++ LOG: entry corrupt or truncated\n");
+    if (buf->len < 3) {
+        // An well-formed entry must consist of at least a priority
+        // and two null characters
+        fprintf(stderr, "+++ LOG: entry too small\n");
         return -1;
     }
-    entry->messageLen = buf->len - preambleAndNullLen;
-    entry->message = entry->tag + tag_len + 1;
+
+    int msgStart = -1;
+    int msgEnd = -1;
+
+    int i;
+    for (i = 1; i < buf->len; i++) {
+        if (buf->msg[i] == '\0') {
+            if (msgStart == -1) {
+                msgStart = i + 1;
+            } else {
+                msgEnd = i;
+                break;
+            }
+        }
+    }
+
+    if (msgStart == -1) {
+        fprintf(stderr, "+++ LOG: malformed log message\n");
+        return -1;
+    }
+    if (msgEnd == -1) {
+        // incoming message not null-terminated; force it
+        msgEnd = buf->len - 1;
+        buf->msg[msgEnd] = '\0';
+    }
+
+    entry->priority = buf->msg[0];
+    entry->tag = buf->msg + 1;
+    entry->message = buf->msg + msgStart;
+    entry->messageLen = msgEnd - msgStart;
 
     return 0;
 }
@@ -644,7 +673,7 @@ int android_log_processBinaryLogBuffer(struct logger_entry *buf,
 
     if (inCount != 0) {
         fprintf(stderr,
-            "Warning: leftover binary log data (%d bytes)\n", inCount);
+            "Warning: leftover binary log data (%zu bytes)\n", inCount);
     }
 
     /*
@@ -724,7 +753,7 @@ char *android_log_formatLogLine (
             break;
         case FORMAT_THREAD:
             prefixLen = snprintf(prefixBuf, sizeof(prefixBuf),
-                "%c(%5d:%p) ", priChar, entry->pid, (void*)entry->tid);
+                "%c(%5d:%5d) ", priChar, entry->pid, entry->tid);
             strcpy(suffixBuf, "\n");
             suffixLen = 1;
             break;
@@ -744,15 +773,15 @@ char *android_log_formatLogLine (
         case FORMAT_THREADTIME:
             prefixLen = snprintf(prefixBuf, sizeof(prefixBuf),
                 "%s.%03ld %5d %5d %c %-8s: ", timeBuf, entry->tv_nsec / 1000000,
-                (int)entry->pid, (int)entry->tid, priChar, entry->tag);
+                entry->pid, entry->tid, priChar, entry->tag);
             strcpy(suffixBuf, "\n");
             suffixLen = 1;
             break;
         case FORMAT_LONG:
             prefixLen = snprintf(prefixBuf, sizeof(prefixBuf),
-                "[ %s.%03ld %5d:%p %c/%-8s ]\n",
+                "[ %s.%03ld %5d:%5d %c/%-8s ]\n",
                 timeBuf, entry->tv_nsec / 1000000, entry->pid,
-                (void*)entry->tid, priChar, entry->tag);
+                entry->tid, priChar, entry->tag);
             strcpy(suffixBuf, "\n\n");
             suffixLen = 2;
             prefixSuffixIsHeaderFooter = 1;
@@ -830,7 +859,6 @@ char *android_log_formatLogLine (
         while(pm < (entry->message + entry->messageLen)) {
             const char *lineStart;
             size_t lineLen;
-
             lineStart = pm;
 
             // Find the next end-of-line in message

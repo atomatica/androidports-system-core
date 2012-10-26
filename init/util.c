@@ -23,6 +23,10 @@
 #include <errno.h>
 #include <time.h>
 
+#ifdef HAVE_SELINUX
+#include <selinux/label.h>
+#endif
+
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -33,6 +37,7 @@
 
 #include <private/android_filesystem_config.h>
 
+#include "init.h"
 #include "log.h"
 #include "util.h"
 
@@ -84,6 +89,9 @@ int create_socket(const char *name, int type, mode_t perm, uid_t uid, gid_t gid)
 {
     struct sockaddr_un addr;
     int fd, ret;
+#ifdef HAVE_SELINUX
+    char *secon;
+#endif
 
     fd = socket(PF_UNIX, type, 0);
     if (fd < 0) {
@@ -102,11 +110,25 @@ int create_socket(const char *name, int type, mode_t perm, uid_t uid, gid_t gid)
         goto out_close;
     }
 
+#ifdef HAVE_SELINUX
+    secon = NULL;
+    if (sehandle) {
+        ret = selabel_lookup(sehandle, &secon, addr.sun_path, S_IFSOCK);
+        if (ret == 0)
+            setfscreatecon(secon);
+    }
+#endif
+
     ret = bind(fd, (struct sockaddr *) &addr, sizeof (addr));
     if (ret) {
         ERROR("Failed to bind socket '%s': %s\n", name, strerror(errno));
         goto out_unlink;
     }
+
+#ifdef HAVE_SELINUX
+    setfscreatecon(NULL);
+    freecon(secon);
+#endif
 
     chown(addr.sun_path, uid, gid);
     chmod(addr.sun_path, perm);
@@ -129,10 +151,22 @@ void *read_file(const char *fn, unsigned *_sz)
     char *data;
     int sz;
     int fd;
+    struct stat sb;
 
     data = 0;
     fd = open(fn, O_RDONLY);
     if(fd < 0) return 0;
+
+    // for security reasons, disallow world-writable
+    // or group-writable files
+    if (fstat(fd, &sb) < 0) {
+        ERROR("fstat failed for '%s'\n", fn);
+        goto oops;
+    }
+    if ((sb.st_mode & (S_IWGRP | S_IWOTH)) != 0) {
+        ERROR("skipping insecure file '%s'\n", fn);
+        goto oops;
+    }
 
     sz = lseek(fd, 0, SEEK_END);
     if(sz < 0) goto oops;

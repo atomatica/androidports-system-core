@@ -253,7 +253,7 @@ static void readLogLines(log_device_t* devices)
     int max = 0;
     int ret;
     int queued_lines = 0;
-    bool sleep = true;
+    bool sleep = false;
 
     int result;
     fd_set readset;
@@ -294,6 +294,11 @@ static void readLogLines(log_device_t* devices)
                     }
                     else if (!ret) {
                         fprintf(stderr, "read: Unexpected EOF!\n");
+                        exit(EXIT_FAILURE);
+                    }
+                    else if (entry->entry.len != ret - sizeof(struct logger_entry)) {
+                        fprintf(stderr, "read: unexpected length. Expected %d, got %d\n",
+                                entry->entry.len, ret - sizeof(struct logger_entry));
                         exit(EXIT_FAILURE);
                     }
 

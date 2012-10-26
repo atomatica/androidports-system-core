@@ -43,7 +43,7 @@
  * usage:  sdcard <path> <uid> <gid>
  *
  * It must be run as root, but will change to uid/gid as soon as it
- * mounts a filesystem on /mnt/sdcard.  It will refuse to run if uid or
+ * mounts a filesystem on /storage/sdcard.  It will refuse to run if uid or
  * gid are zero.
  *
  *
@@ -70,7 +70,7 @@
 
 #define FUSE_UNKNOWN_INO 0xffffffff
 
-#define MOUNT_POINT "/mnt/sdcard"
+#define MOUNT_POINT "/storage/sdcard0"
 
 struct handle {
     struct node *node;
@@ -912,7 +912,7 @@ void handle_fuse_request(struct fuse *fuse, struct fuse_in_header *hdr, void *da
         out.major = FUSE_KERNEL_VERSION;
         out.minor = FUSE_KERNEL_MINOR_VERSION;
         out.max_readahead = req->max_readahead;
-        out.flags = FUSE_ATOMIC_O_TRUNC;
+        out.flags = FUSE_ATOMIC_O_TRUNC | FUSE_BIG_WRITES;
         out.max_background = 32;
         out.congestion_threshold = 32;
         out.max_write = 256 * 1024;
@@ -941,7 +941,7 @@ void handle_fuse_requests(struct fuse *fuse)
     int len;
     
     for (;;) {
-        len = read(fuse->fd, req, 8192);
+        len = read(fuse->fd, req, sizeof(req));
         if (len < 0) {
             if (errno == EINTR)
                 continue;

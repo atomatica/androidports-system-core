@@ -37,6 +37,8 @@
 
 // Google's USB Vendor ID
 #define VENDOR_ID_GOOGLE        0x18d1
+// Intel's USB Vendor ID
+#define VENDOR_ID_INTEL         0x8087
 // HTC's USB Vendor ID
 #define VENDOR_ID_HTC           0x0bb4
 // Samsung's USB Vendor ID
@@ -111,11 +113,23 @@
 #define VENDOR_ID_ARCHOS        0x0E79
 // Positivo's USB Vendor ID
 #define VENDOR_ID_POSITIVO      0x1662
-
+// Fujitsu's USB Vendor ID
+#define VENDOR_ID_FUJITSU       0x04C5
+// Lumigon's USB Vendor ID
+#define VENDOR_ID_LUMIGON       0x25E3
+// Quanta's USB Vendor ID
+#define VENDOR_ID_QUANTA        0x0408
+// INQ Mobile's USB Vendor ID
+#define VENDOR_ID_INQ_MOBILE    0x2314
+// Sony's USB Vendor ID
+#define VENDOR_ID_SONY          0x054C
+// Yulong Coolpad's USB Vendor ID
+#define VENDOR_ID_YULONG_COOLPAD 0x1EBF
 
 /** built-in vendor list */
 int builtInVendorIds[] = {
     VENDOR_ID_GOOGLE,
+    VENDOR_ID_INTEL,
     VENDOR_ID_HTC,
     VENDOR_ID_SAMSUNG,
     VENDOR_ID_MOTOROLA,
@@ -153,6 +167,12 @@ int builtInVendorIds[] = {
     VENDOR_ID_PEGATRON,
     VENDOR_ID_ARCHOS,
     VENDOR_ID_POSITIVO,
+    VENDOR_ID_FUJITSU,
+    VENDOR_ID_LUMIGON,
+    VENDOR_ID_QUANTA,
+    VENDOR_ID_INQ_MOBILE,
+    VENDOR_ID_SONY,
+    VENDOR_ID_YULONG_COOLPAD,
 };
 
 #define BUILT_IN_VENDOR_COUNT    (sizeof(builtInVendorIds)/sizeof(builtInVendorIds[0]))

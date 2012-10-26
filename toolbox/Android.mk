@@ -55,7 +55,23 @@ TOOLS := \
 	nandread \
 	ionice \
 	touch \
-	lsof
+	lsof \
+	md5
+
+ifeq ($(HAVE_SELINUX),true)
+
+TOOLS += \
+	getenforce \
+	setenforce \
+	chcon \
+	restorecon \
+	runcon \
+	getsebool \
+	setsebool \
+	load_policy
+
+endif
+
 
 ifneq (,$(filter userdebug eng,$(TARGET_BUILD_VARIANT)))
 TOOLS += r
@@ -67,6 +83,16 @@ LOCAL_SRC_FILES:= \
 	$(patsubst %,%.c,$(TOOLS))
 
 LOCAL_SHARED_LIBRARIES := libcutils libc libusbhost
+
+LOCAL_C_INCLUDES := bionic/libc/bionic
+
+ifeq ($(HAVE_SELINUX),true)
+
+LOCAL_CFLAGS += -DHAVE_SELINUX
+LOCAL_SHARED_LIBRARIES += libselinux
+LOCAL_C_INCLUDES += external/libselinux/include
+
+endif
 
 LOCAL_MODULE:= toolbox
 

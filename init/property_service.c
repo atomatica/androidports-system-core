@@ -78,6 +78,7 @@ struct {
     { "wlan.",            AID_SYSTEM,   0 },
     { "dhcp.",            AID_SYSTEM,   0 },
     { "dhcp.",            AID_DHCP,     0 },
+    { "debug.",           AID_SYSTEM,   0 },
     { "debug.",           AID_SHELL,    0 },
     { "log.",             AID_SHELL,    0 },
     { "service.adb.root", AID_SHELL,    0 },
@@ -338,21 +339,6 @@ int property_set(const char *name, const char *value)
     return 0;
 }
 
-static int property_list(void (*propfn)(const char *key, const char *value, void *cookie),
-                  void *cookie)
-{
-    char name[PROP_NAME_MAX];
-    char value[PROP_VALUE_MAX];
-    const prop_info *pi;
-    unsigned n;
-
-    for(n = 0; (pi = __system_property_find_nth(n)); n++) {
-        __system_property_read(pi, name, value);
-        propfn(name, value, cookie);
-    }
-    return 0;
-}
-
 void handle_property_set_fd()
 {
     prop_msg msg;
@@ -505,11 +491,14 @@ static void load_persistent_properties()
     persistent_properties_loaded = 1;
 }
 
-void property_init(bool load_defaults)
+void property_init(void)
 {
     init_property_area();
-    if (load_defaults)
-        load_properties_from_file(PROP_PATH_RAMDISK_DEFAULT);
+}
+
+void property_load_boot_defaults(void)
+{
+    load_properties_from_file(PROP_PATH_RAMDISK_DEFAULT);
 }
 
 int properties_inited(void)
@@ -524,7 +513,9 @@ int properties_inited(void)
  */
 void load_persist_props(void)
 {
+#ifdef ALLOW_LOCAL_PROP_OVERRIDE
     load_properties_from_file(PROP_PATH_LOCAL_OVERRIDE);
+#endif /* ALLOW_LOCAL_PROP_OVERRIDE */
     /* Read persistent properties after all default values have been loaded. */
     load_persistent_properties();
 }
@@ -535,7 +526,9 @@ void start_property_service(void)
 
     load_properties_from_file(PROP_PATH_SYSTEM_BUILD);
     load_properties_from_file(PROP_PATH_SYSTEM_DEFAULT);
+#ifdef ALLOW_LOCAL_PROP_OVERRIDE
     load_properties_from_file(PROP_PATH_LOCAL_OVERRIDE);
+#endif /* ALLOW_LOCAL_PROP_OVERRIDE */
     /* Read persistent properties after all default values have been loaded. */
     load_persistent_properties();
 
